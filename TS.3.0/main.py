@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
+references_path = os.path.join(os.path.dirname(__file__), "references")
+ref_list = [f.split('.')[0] for f in os.listdir(references_path) if f.endswith('.csv')]
 from io import BytesIO
 from datetime import datetime
 
