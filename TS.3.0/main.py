@@ -113,17 +113,20 @@ with tab_classif:
     if filtered_data:
         table_data = []
         for ref, data in filtered_data.items():
+            taux_global = sum(data["taux_de_sortie"]) / len(data["taux_de_sortie"]) if data["taux_de_sortie"] else 0
             ref_row = {
                 "Référence": ref,
                 "Dernière Mise à Jour": data.get("derniere_mise_a_jour", [""])[0],
-                "P": data.get("P", [""])[0]
+                "P": data.get("P", [""])[0],
+                "Taux Global": round(taux_global, 2)
             }
             for i, taux in enumerate(data.get("taux_de_sortie", []), start=1):
                 ref_row[f"P{i}"] = taux
             table_data.append(ref_row)
         
-        df_filtered = pd.DataFrame(table_data)
-        st.write("### Taux de sortie")
+        # Trier les données par taux global, du plus grand au plus petit
+        df_filtered = pd.DataFrame(table_data).sort_values(by="Taux Global", ascending=False)
+        st.write("### Taux de sortie (Trié par Taux Global)")
         st.dataframe(df_filtered)
 
         fig, ax = plt.subplots()
