@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 import os
 from io import BytesIO
 from datetime import datetime
+import os
+os.makedirs("references", exist_ok=True)
 
 
 # Fonction pour charger une référence spécifique depuis un fichier CSV
