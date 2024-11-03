@@ -102,12 +102,7 @@ with tab_classif:
 
     ref_list = [f.split('.')[0] for f in os.listdir("references") if f.endswith('.csv')]
     filtered_data = {ref: load_reference(ref) for ref in ref_list if load_reference(ref) and load_reference(ref).get("classification", [""])[0] == classif_filter and load_reference(ref).get("sous_classification", [""])[0] == sous_classif_filter}
-    references_path = os.path.join(os.path.dirname(__file__), "references")
-
-if os.path.exists(references_path):
-    ref_list = [f.split('.')[0] for f in os.listdir(references_path) if f.endswith('.csv')]
-else:
-    print("Le dossier 'references' est introuvable.")
+  
     if filtered_data:
         table_data = []
         for ref, data in filtered_data.items():
