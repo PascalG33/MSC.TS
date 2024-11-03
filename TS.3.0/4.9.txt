@@ -1,0 +1,113 @@
+import os
+import pandas as pd
+from datetime import datetime
+import streamlit as st
+import matplotlib.pyplot as plt
+from utils.gif_handler import get_gif_message
+
+# Initialisation du dossier "references"
+if not os.path.exists("references"):
+    os.makedirs("references")
+
+def save_reference(ref_id, data):
+    file_path = f"references/{ref_id}.csv"
+    os.makedirs("references", exist_ok=True)
+    df = pd.DataFrame(data)
+    df.to_csv(file_path, index=False)
+
+def load_reference(ref_id):
+    file_path = f"references/{ref_id}.csv"
+    if os.path.exists(file_path):
+        return pd.read_csv(file_path).to_dict(orient="list")
+    else:
+        return None
+
+def delete_reference(ref_id):
+    file_path = f"references/{ref_id}.csv"
+    if os.path.exists(file_path):
+        os.remove(file_path)
+
+# Créer les onglets
+tab_calcul, tab_classif = st.tabs(["Calcul des Taux de Sortie", "Tableau des Classifications"])
+
+with tab_calcul:
+    st.subheader("Calcul des Taux de Sortie")
+    ref = st.text_input("Entrez une nouvelle référence")
+
+    if ref:
+        classification = st.selectbox("Classification", ["2 4 Pulls", "2 5 Gilets"], key="classification_calcul")
+        sous_classification = st.selectbox("Sous-classification", ["Les basics", "Les Commerciales"], key="sous_classification_calcul")
+        sales_dates = st.text_area("Dates de Vente (une date par ligne, format jj/mm/aaaa)")
+        sales_values = st.text_area("Quantités de Vente (valeurs négatives pour les retours)")
+        periode = st.slider("Durée de Période (Jours)", 1, 31, 10, key="periode_calcul")
+
+        if st.button("Calculer le Taux de Sortie"):
+            if sales_dates.strip() and sales_values.strip():
+                dates = sales_dates.strip().split('\n')
+                ventes = [int(value) for value in sales_values.strip().split('\n') if value.isdigit()]
+                data = sorted(zip(dates, ventes), key=lambda x: datetime.strptime(x[0], "%d/%m/%Y"))
+                dates, ventes = zip(*data)
+                periods = [ventes[i:i + periode] for i in range(0, len(ventes), periode)]
+                dates_par_periode = [dates[i:i + periode] for i in range(0, len(dates), periode)]
+                dates_par_periode = [d for d, p in zip(dates_par_periode, periods) if len(d) == len(p)]
+                ventes_par_periode = [p for d, p in zip(dates_par_periode, periods) if len(d) == len(p)]
+                min_length = min(len(dates_par_periode), len(ventes_par_periode))
+
+                reference_data = {
+                    "classification": [classification] * min_length,
+                    "sous_classification": [sous_classification] * min_length,
+                    "periodes": [f"Période {i+1}" for i in range(min_length)],
+                    "taux_de_sortie": [round(sum(period) / len(period), 1) for period in ventes_par_periode[:min_length] if period],
+                    "total_ventes": [sum(period) for period in ventes_par_periode[:min_length]],
+                    "dates_par_periode": dates_par_periode[:min_length],
+                    "ventes_par_periode": ventes_par_periode[:min_length],
+                    "derniere_mise_a_jour": [datetime.now().strftime("%Y-%m-%d %H:%M:%S")] * min_length
+                }
+                save_reference(ref, reference_data)
+                st.success("Référence ajoutée et calculée avec succès.")
+
+with tab_classif:
+    st.subheader("Tableau des Classifications")
+    classif_filter = st.selectbox("Classification", ["2 4 Pulls", "2 5 Gilets"], key="classification_filter")
+    sous_classif_filter = st.selectbox("Sous-classification", ["Les basics", "Les Commerciales"], key="sous_classification_filter")
+
+    ref_list = [f.split('.')[0] for f in os.listdir("references") if f.endswith('.csv')]
+    filtered_data = {ref: load_reference(ref) for ref in ref_list if load_reference(ref) and load_reference(ref).get("classification", [""])[0] == classif_filter and load_reference(ref).get("sous_classification", [""])[0] == sous_classif_filter}
+
+    if filtered_data:
+        table_data = []
+        for ref, data in filtered_data.items():
+            ref_row = {"Référence": ref, "Dernière Mise à Jour": data.get("derniere_mise_a_jour", [""])[0]}  # Date de mise à jour
+            for i, (period, taux) in enumerate(zip(data.get("periodes", []), data.get("taux_de_sortie", [])), start=1):
+                ref_row[f"P{i}"] = round(taux, 1)
+            table_data.append(ref_row)
+        df_filtered = pd.DataFrame(table_data)
+        
+        # Afficher le tableau avec les dates de mise à jour
+        st.write("### Données filtrées par période avec date de mise à jour")
+        st.dataframe(df_filtered)
+
+        # Création du graphique des taux de sortie par période pour chaque référence
+        fig, ax = plt.subplots()
+        for ref, data in filtered_data.items():
+            periods = data.get("periodes", [])
+            taux_de_sortie = data.get("taux_de_sortie", [])
+            ax.plot(periods, taux_de_sortie, marker="o", linestyle="-", label=ref)
+
+        ax.set_title("Graphique des Taux de Sortie par Période")
+        ax.set_xlabel("Période")
+        ax.set_ylabel("Taux de Sortie")
+        ax.legend(title="Références")
+        st.pyplot(fig)
+
+        ref_to_delete = st.selectbox("Sélectionnez une référence à supprimer", options=["Aucune"] + ref_list)
+        
+        if st.button("Supprimer la référence sélectionnée") and ref_to_delete != "Aucune":
+            delete_reference(ref_to_delete)
+            st.write("**Cliquez sur [rafraîchir](#) pour actualiser l'affichage**")
+
+        csv = df_filtered.to_csv(index=False).encode('utf-8')
+        st.download_button("Télécharger les données filtrées en CSV", data=csv, file_name="filtered_data.csv", mime="text/csv")
+    else:
+        st.write("Aucune donnée ne correspond aux critères de sélection.")
+

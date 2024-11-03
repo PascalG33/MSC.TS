@@ -1,0 +1,13 @@
+project_folder/
+│
+├── main.py                  # Script principal Streamlit
+├── data/
+│   └── restructured_references.csv
+├── assets/                  # Dossier pour les médias (GIFs, images)
+│   ├── welcome.gif
+│   └── ...
+└── utils/
+    ├── __init__.py          # Fichier vide pour rendre utils un package Python
+    ├── data_handler.py      # Fonctions de chargement et de sauvegarde des données
+    ├── gif_handler.py       # Gestion des GIFs et messages
+    └── charts.py            # Fonctions de génération de graphiques
