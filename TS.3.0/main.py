@@ -4,6 +4,13 @@ import matplotlib.pyplot as plt
 import os
 from io import BytesIO
 from datetime import datetime
+import os
+references_path = os.path.join(os.path.dirname(__file__), "references")
+
+if os.path.exists(references_path):
+    ref_list = [f.split('.')[0] for f in os.listdir(references_path) if f.endswith('.csv')]
+else:
+    print("Le dossier 'references' est introuvable.")
 
 # Fonction pour charger une référence spécifique depuis un fichier CSV
 def load_reference(ref):
